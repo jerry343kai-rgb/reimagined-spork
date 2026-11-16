@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>Panorama Smart Display Pro</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: #000000;
+      color: #f3f4f6;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Helvetica Neue", sans-serif;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .dashboard-container {
+      width: 100vw;
+      height: calc(100vh - 32px);
+      display: grid;
+      grid-template-columns: 0.95fr 1.15fr;
+      gap: 20px;
+      padding: 24px 28px 10px 28px;
+    }
+
+    /* 左側：時計 ＆ 天気トレンド表示エリア */
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding-left: 10px;
+    }
+
+    .flip-clock {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .flip-unit {
+      background-color: #1a1e26;
+      color: #ffffff;
+      font-size: 4.8rem;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 12px;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.6);
+      border-bottom: 4px solid #0d1015;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .flip-colon {
+      font-size: 3.8rem;
+      font-weight: 700;
+      color: #4b5563;
+      margin-top: -6px;
+    }
+
+    .clock-sub-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 1.15rem;
+      color: #9ca3af;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .city-btn-link {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #38bdf8;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .city-btn-link:active { background: #334155; }
+
+    /* 時計の真下：天候絵文字・気温・トレンド矢印 */
+    .weather-trend-box {
+      background: #141a25;
+      border: 1px solid #232b3b;
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 480px;
+      margin-bottom: 10px;
+    }
+    .wt-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .wt-emoji { font-size: 2.2rem; }
+    .wt-temp { font-size: 2rem; font-weight: 700; color: #fff; }
+    .wt-desc { font-size: 0.95rem; color: #60a5fa; font-weight: 700; }
+    .wt-arrow-box {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      font-size: 0.85rem;
+      color: #9ca3af;
+    }
+    .wt-trend-val { font-weight: 700; color: #f3f4f6; }
+
+    /* インジケーターバッジ群 */
+    .indicators-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-width: 480px;
+    }
+    .ind-badge {
+      background: #141a25;
+      border: 1px solid #232b3b;
+      border-radius: 8px;
+      padding: 5px 10px;
+      display: flex;
+      flex-direction: column;
+      min-width: 105px;
+    }
+    .ind-label { font-size: 0.68rem; color: #9ca3af; font-weight: 600; margin-bottom: 2px; }
+    .ind-val { font-size: 0.9rem; color: #f3f4f6; font-weight: 700; }
+
+    /* 右側：スライドカードエリア */
+    .right-panel {
+      position: relative;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      border-radius: 20px;
+    }
+
+    .cards-track {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.4s ease-in-out;
+    }
+
+    .card {
+      min-width: 100%;
+      height: 100%;
+      background-color: #12161f;
+      border: 1px solid #222834;
+      border-radius: 20px;
+      padding: 20px 26px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    .card-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #9ca3af;
+      margin-bottom: 4px;
+    }
+
+    .nhk-badge {
+      background: #1e2532;
+      color: #38bdf8;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* 1. 防災・警報カード */
+    .alert-card.danger { background-color: #450a0a; border-color: #ef4444; }
+    .alert-card.warning { background-color: #451a03; border-color: #f59e0b; }
+
+    .jma-banner {
+      background-color: #1e293b;
+      border-left: 4px solid #38bdf8;
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+    }
+    .jma-banner.has-warning { background-color: #78350f; border-left-color: #fbbf24; }
+    .jma-banner.has-danger { background-color: #991b1b; border-left-color: #f87171; }
+    .jma-label { font-size: 0.7rem; font-weight: 700; color: #93c5fd; }
+    .jma-text { font-size: 0.9rem; font-weight: 700; color: #ffffff; }
+
+    .quake-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .alert-max-scale {
+      font-size: 1.6rem;
+      font-weight: 700;
+      background: #2563eb;
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 6px;
+    }
+    .tsunami-badge {
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: #064e3b;
+      color: #6ee7b7;
+      border: 1px solid #059669;
+    }
+    .tsunami-badge.warn { background: #991b1b; color: #fecaca; border-color: #ef4444; }
+
+    .alert-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 10px;
+      background: #191f2c;
+      border-radius: 8px;
+      padding: 10px 12px;
+      border-left: 4px solid #3b82f6;
+      font-size: 0.88rem;
+    }
+    .detail-item span.lbl { color: #9ca3af; font-size: 0.75rem; display: block; }
+    .detail-item span.val { color: #f3f4f6; font-weight: 700; }
+    .detail-full { grid-column: 1 / 3; border-top: 1px solid #283042; padding-top: 4px; margin-top: 2px; }
+
+    /* 2 & 3. ニュースカード */
+    .news-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.35;
+      margin-bottom: 6px;
+    }
+    .news-body-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin: 4px 0;
+    }
+    .news-desc {
+      font-size: 0.95rem;
+      color: #d1d5db;
+      line-height: 1.5;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .qr-box {
+      background: #ffffff;
+      padding: 5px;
+      border-radius: 6px;
+      flex-shrink: 0;
+      width: 86px;
+      height: 86px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .qr-box img { width: 76px; height: 76px; display: block; }
+    .news-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: #9ca3af;
+      border-top: 1px solid #222834;
+      padding-top: 6px;
+    }
+
+    /* 4. 天気詳細カード（3時間おき ＆ 3日後予報 ＆ 降水確率 ＆ 湿度） */
+    .weather-card-sec {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .weather-sub-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #9ca3af;
+      margin-bottom: 3px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .hourly-strip, .daily-strip {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .h-cell, .d-cell {
+      flex: 1;
+      background: #191f2c;
+      border-radius: 8px;
+      padding: 6px 4px;
+      text-align: center;
+      font-size: 0.78rem;
+    }
+    .h-time, .d-date { color: #9ca3af; margin-bottom: 2px; font-weight: 600; }
+    .h-temp, .d-temp { font-weight: 700; font-size: 0.9rem; }
+    .pop-text { font-size: 0.72rem; color: #38bdf8; font-weight: 600; margin-top: 2px; }
+    .t-max { color: #f87171; }
+    .t-min { color: #60a5fa; }
+    .card-humid-badge {
+      background: #1e293b;
+      color: #38bdf8;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+    }
+
+    /* ミニ・フッター */
+    .mini-footer {
+      width: 100vw;
+      height: 32px;
+      background-color: #080b10;
+      border-top: 1px solid #1a2230;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 24px;
+      font-size: 0.75rem;
+      color: #9ca3af;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    .status-ok { color: #34d399; font-weight: 700; }
+    .wifi-ok { color: #38bdf8; font-weight: 700; }
+
+    /* スライダーインジケーター */
+    .slider-dots {
+      position: absolute;
+      bottom: 10px;
+      right: 24px;
+      display: flex;
+      gap: 5px;
+      z-index: 10;
+    }
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4b5563;
+      transition: background 0.3s;
+    }
+    .dot.active { background: #38bdf8; width: 18px; border-radius: 4px; }
+
+    @media (max-width: 900px) {
+      .dashboard-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: auto;
+        overflow-y: auto;
+        padding: 12px;
+      }
+      body { height: auto; overflow: auto; }
+      .right-panel { height: 420px; }
+      .flip-unit { font-size: 3.5rem; padding: 4px 10px; }
+      .flip-colon { font-size: 3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- メインダッシュボード -->
+  <div class="dashboard-container" id="main-container">
+    <!-- 左側：時計 ＆ 天気トレンドボックス ＆ インジケーター -->
+    <div class="left-panel">
+      <div class="flip-clock">
+        <div class="flip-unit" id="hour-box">00</div>
+        <div class="flip-colon">:</div>
+        <div class="flip-unit" id="min-box">00</div>
+        <div class="flip-colon">:</div>
+        <div class="flip-unit" id="sec-box">00</div>
+      </div>
+
+      <div class="clock-sub-info">
+        <div id="date-el">----年--月--日 (-)</div>
+        <div>
+          <button class="city-btn-link" id="city-btn" onclick="promptCustomLocation()">📍 <span id="current-location-name">大阪府 堺市</span></button>
+        </div>
+      </div>
+
+      <!-- 時計の真下：天候絵文字・気温・トレンド矢印 -->
+      <div class="weather-trend-box">
+        <div class="wt-main">
+          <div class="wt-emoji" id="wt-emoji">☀️</div>
+          <div>
+            <div class="wt-temp" id="wt-temp">--°C</div>
+            <div class="wt-desc" id="wt-desc">取得中...</div>
+          </div>
+        </div>
+        <div class="wt-arrow-box" id="wt-trend-box">
+          <span>気温トレンド</span>
+          <span class="wt-trend-val" id="wt-trend-text">--</span>
+        </div>
+      </div>
+
+      <!-- 気象インジケーター群 -->
+      <div class="indicators-row">
+        <div class="ind-badge">
+          <span class="ind-label">💧 湿度</span>
+          <span class="ind-val" id="ind-humid">--%</span>
+        </div>
+        <div class="ind-badge">
+          <span class="ind-label">💨 風速</span>
+          <span class="ind-val" id="ind-wind">-- m/s</span>
+        </div>
+        <div class="ind-badge">
+          <span class="ind-label">🍃 空気質 (AQI)</span>
+          <span class="ind-val" id="ind-aqi">-- (良好)</span>
+        </div>
+        <div class="ind-badge">
+          <span class="ind-label">✨ 快適度</span>
+          <span class="ind-val" id="ind-comfort">--</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右側：スライドカード群 -->
+    <div class="right-panel" id="right-slider">
+      <div class="cards-track" id="cards-track">
+
+        <!-- カード1：防災・気象警報 ＆ 地震情報 -->
+        <div class="card" id="quake-card">
+          <div class="card-top-bar">
+            <span>🚨 防災警報 / 地震情報</span>
+            <span id="quake-time">--/-- --:-- 発生</span>
+          </div>
+
+          <div class="jma-banner" id="jma-banner">
+            <div class="jma-label" id="jma-location-label">📢 大阪府 堺市 気象警報</div>
+            <div class="jma-text" id="jma-warning-text">気象情報を確認中...</div>
+          </div>
+
+          <div>
+            <div class="quake-header-row">
+              <div class="alert-max-scale" id="quake-scale">監視中</div>
+              <div class="tsunami-badge" id="tsunami-status">津波情報確認中</div>
+            </div>
+
+            <div class="alert-details-grid">
+              <div class="detail-item">
+                <span class="lbl">震源地</span>
+                <span class="val" id="quake-hypo">調査中...</span>
+              </div>
+              <div class="detail-item">
+                <span class="lbl">規模 / 深さ</span>
+                <span class="val" id="quake-mag-depth">M-- / --km</span>
+              </div>
+              <div class="detail-item">
+                <span class="lbl">震源座標</span>
+                <span class="val" id="quake-coords">-- / --</span>
+              </div>
+              <div class="detail-item">
+                <span class="lbl">情報種別</span>
+                <span class="val" id="quake-type">地震観測情報</span>
+              </div>
+              <div class="detail-item detail-full">
+                <span class="lbl">主な観測エリア</span>
+                <span class="val" id="quake-areas">データを取得中...</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="font-size: 0.75rem; color: #9ca3af;">気象庁防災・P2P地震情報連動</div>
+        </div>
+
+        <!-- カード2：NHKONEニュース（記事1） -->
+        <div class="card">
+          <div class="card-top-bar">
+            <span>LATEST NEWS 1</span>
+            <span class="nhk-badge">NHKONEニュース</span>
+          </div>
+          <div>
+            <div class="news-title" id="news-title-1">ニュース記事を読み込んでいます...</div>
+            <div class="news-body-row">
+              <div class="news-desc" id="news-desc-1">しばらくお待ちください。</div>
+              <div class="qr-box">
+                <img id="news-qr-1" src="" alt="QRコード">
+              </div>
+            </div>
+          </div>
+          <div class="news-footer">
+            <span id="news-date-1">----/--/-- --:--</span>
+            <span>詳しい内容はQRコードから</span>
+          </div>
+        </div>
+
+        <!-- カード3：NHKONEニュース（記事2） -->
+        <div class="card">
+          <div class="card-top-bar">
+            <span>LATEST NEWS 2</span>
+            <span class="nhk-badge">NHKONEニュース</span>
+          </div>
+          <div>
+            <div class="news-title" id="news-title-2">次のニュース記事を読み込んでいます...</div>
+            <div class="news-body-row">
+              <div class="news-desc" id="news-desc-2">しばらくお待ちください。</div>
+              <div class="qr-box">
+                <img id="news-qr-2" src="" alt="QRコード">
+              </div>
+            </div>
+          </div>
+          <div class="news-footer">
+            <span id="news-date-2">----/--/-- --:--</span>
+            <span>詳しい内容はQRコードから</span>
+          </div>
+        </div>
+
+        <!-- カード4：詳細天気予報（3時間おき ＆ 3日後予報 ＆ 降水確率 ＆ 湿度） -->
+        <div class="card">
+          <div class="card-top-bar">
+            <span>WEATHER FORECAST (<span id="weather-card-location">大阪府 堺市</span>)</span>
+            <span class="card-humid-badge" id="card-humid-text">💧 湿度 --%</span>
+          </div>
+          <div class="weather-card-sec">
+            <div>
+              <div class="weather-sub-header">
+                <span>⏱️ 3時間おき天気予報</span>
+                <span>気温 / 降水確率</span>
+              </div>
+              <div class="hourly-strip" id="hourly-strip"></div>
+            </div>
+            <div>
+              <div class="weather-sub-header">
+                <span>📅 3日後までの週間予報</span>
+                <span>最高・最低 / 降水確率</span>
+              </div>
+              <div class="daily-strip" id="daily-strip"></div>
+            </div>
+          </div>
+          <div style="font-size: 0.75rem; color: #9ca3af; text-align: right;">Open-Meteo Weather API</div>
+        </div>
+
+      </div>
+
+      <!-- インジケータードット -->
+      <div class="slider-dots" id="slider-dots">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ミニ・フッター -->
+  <div class="mini-footer">
+    <div>
+      <span class="status-ok">● システム正常稼働中</span> ｜ <span class="wifi-ok">📶 Wi-Fi接続安定</span>
+    </div>
+    <div id="footer-update-time">
+      最終データ更新: --:--
+    </div>
+  </div>
+
+  <script>
+    var userLocation = {
+      name: '大阪府 堺市',
+      lat: 34.5733,
+      lon: 135.4830,
+      prefCode: '270000',
+      cityCode: '2714000'
+    };
+
+    try {
+      var saved = localStorage.getItem('panorama_custom_loc');
+      if (saved) {
+        userLocation = JSON.parse(saved);
+      }
+    } catch (e) {}
+
+    function updateLocationUI() {
+      document.getElementById('current-location-name').textContent = userLocation.name;
+      document.getElementById('weather-card-location').textContent = userLocation.name;
+      document.getElementById('jma-location-label').textContent = '📢 ' + userLocation.name + ' 気象警報';
+    }
+
+    function promptCustomLocation() {
+      var inputName = prompt('表示する場所の名前を入力してください（例: 東京都庁）', userLocation.name);
+      if (!inputName) return;
+      var inputLat = prompt('緯度 (Latitude) を入力してください（例: 35.6895）', userLocation.lat);
+      if (inputLat === null) return;
+      var inputLon = prompt('経度 (Longitude) を入力してください（例: 139.6917）', userLocation.lon);
+      if (inputLon === null) return;
+
+      var latNum = parseFloat(inputLat);
+      var lonNum = parseFloat(inputLon);
+
+      if (isNaN(latNum) || isNaN(lonNum)) {
+        alert('緯度または経度が正しくありません。数値で入力してください。');
+        return;
+      }
+
+      userLocation.name = inputName;
+      userLocation.lat = latNum;
+      userLocation.lon = lonNum;
+
+      try {
+        localStorage.setItem('panorama_custom_loc', JSON.stringify(userLocation));
+      } catch (e) {}
+
+      updateLocationUI();
+      loadWeather();
+      loadDisasterDetails();
+      alert('場所を「' + userLocation.name + '」に変更しました！');
+    }
+
+    var WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+    function pad(n) { return n < 10 ? '0' + n : String(n); }
+
+    function updateClock() {
+      var now = new Date();
+      document.getElementById('hour-box').textContent = pad(now.getHours());
+      document.getElementById('min-box').textContent = pad(now.getMinutes());
+      document.getElementById('sec-box').textContent = pad(now.getSeconds());
+      document.getElementById('date-el').textContent = now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日 (' + WEEKDAYS[now.getDay()] + ')';
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    var currentCardIdx = 0;
+    var totalCards = 4;
+    var track = document.getElementById('cards-track');
+    var dots = document.querySelectorAll('.dot');
+
+    function slideToCard(idx) {
+      currentCardIdx = idx;
+      track.style.transform = 'translateX(-' + (currentCardIdx * 100) + '%)';
+      for (var i = 0; i < dots.length; i++) {
+        dots[i].className = i === currentCardIdx ? 'dot active' : 'dot';
+      }
+    }
+
+    function autoSlide() {
+      currentCardIdx = (currentCardIdx + 1) % totalCards;
+      slideToCard(currentCardIdx);
+    }
+    var slideTimer = setInterval(autoSlide, 15000);
+
+    var startX = 0;
+    var sliderPanel = document.getElementById('right-slider');
+    sliderPanel.addEventListener('touchstart', function(e) {
+      if (e.touches && e.touches.length > 0) startX = e.touches[0].clientX;
+    }, { passive: true });
+
+    sliderPanel.addEventListener('touchend', function(e) {
+      if (e.changedTouches && e.changedTouches.length > 0) {
+        var diffX = startX - e.changedTouches[0].clientX;
+        if (Math.abs(diffX) > 50) {
+          clearInterval(slideTimer);
+          if (diffX > 0) {
+            currentCardIdx = (currentCardIdx + 1) % totalCards;
+          } else {
+            currentCardIdx = (currentCardIdx - 1 + totalCards) % totalCards;
+          }
+          slideToCard(currentCardIdx);
+          slideTimer = setInterval(autoSlide, 15000);
+        }
+      }
+    }, { passive: true });
+
+    // 天気データ取得 ＆ 降水確率・湿度・3時間おき・3日後予報表示
+    function loadWeather() {
+      var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + userLocation.lat + '&longitude=' + userLocation.lon +
+                '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code' +
+                '&hourly=temperature_2m,precipitation_probability,weather_code' +
+                '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FTokyo';
+      
+      var aqiUrl = 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + userLocation.lat + '&longitude=' + userLocation.lon + '&current=european_aqi';
+
+      fetch(url)
+        .then(function(r) {
+          if (!r.ok) throw new Error('Network response was not ok');
+          return r.json();
+        })
+        .then(function(d) {
+          if (!d || !d.current) throw new Error('Invalid weather data structure');
+          
+          var temp = Math.round(d.current.temperature_2m);
+          var humid = d.current.relative_humidity_2m !== undefined ? d.current.relative_humidity_2m : '--';
+          var wind = d.current.wind_speed_10m !== undefined ? d.current.wind_speed_10m : '--';
+          var code = d.current.weather_code !== undefined ? d.current.weather_code : 0;
+
+          var emoji = '☀️';
+          var desc = '晴れ';
+          if (code >= 51 && code <= 99) { emoji = '🌧️'; desc = '雨'; }
+          else if (code >= 1 && code <= 3) { emoji = '☁️'; desc = '曇り'; }
+
+          // 時計真下の天気トレンドボックス反映
+          document.getElementById('wt-emoji').textContent = emoji;
+          document.getElementById('wt-temp').textContent = temp + '°C';
+          document.getElementById('wt-desc').textContent = desc;
+
+          var trendText = '➡️ 横ばい';
+          if (d.hourly && d.hourly.temperature_2m) {
+            var nowHourIdx = new Date().getHours();
+            if (nowHourIdx > 0 && d.hourly.temperature_2m[nowHourIdx] !== undefined && d.hourly.temperature_2m[nowHourIdx - 1] !== undefined) {
+              var diff = d.hourly.temperature_2m[nowHourIdx] - d.hourly.temperature_2m[nowHourIdx - 1];
+              if (diff > 0.3) trendText = '📈 昇温中 (+' + diff.toFixed(1) + '°)';
+              else if (diff < -0.3) trendText = '📉 下降中 (' + diff.toFixed(1) + '°)';
+            }
+          }
+          document.getElementById('wt-trend-text').textContent = trendText;
+
+          // 左側インジケーター＆スライドカード右上の湿度反映
+          document.getElementById('ind-humid').textContent = humid + '%';
+          document.getElementById('card-humid-text').textContent = '💧 湿度 ' + humid + '%';
+          document.getElementById('ind-wind').textContent = wind + ' m/s';
+
+          var comfort = '快適';
+          if (temp > 28 || (temp > 25 && humid > 70)) comfort = '蒸し暑い';
+          else if (temp < 10) comfort = '寒い';
+          else if (humid < 30) comfort = '乾燥';
+          document.getElementById('ind-comfort').textContent = comfort;
+
+          // スライドカード4：3時間おき予報（降水確率付き）
+          if (d.hourly && d.hourly.time && d.hourly.temperature_2m) {
+            var nowH = new Date().getHours();
+            var hHtml = '';
+            var count = 0;
+            for (var i = 0; i < d.hourly.time.length && count < 4; i++) {
+              var dt = new Date(d.hourly.time[i]);
+              if (dt.getHours() >= nowH || dt.getDate() !== new Date().getDate()) {
+                if (count === 0 || (dt.getHours() - nowH + 24) % 3 === 0) {
+                  var hCode = d.hourly.weather_code[i];
+                  var hEmoji = (hCode >= 51) ? '🌧️' : (hCode >= 1) ? '☁️' : '☀️';
+                  var hPop = (d.hourly.precipitation_probability && d.hourly.precipitation_probability[i] !== undefined) ? d.hourly.precipitation_probability[i] : 0;
+                  hHtml += '<div class="h-cell"><div class="h-time">' + pad(dt.getHours()) + '時</div>' +
+                           '<div style="font-size:1.05rem; margin:2px 0;">' + hEmoji + '</div>' +
+                           '<div class="h-temp">' + Math.round(d.hourly.temperature_2m[i]) + '°</div>' +
+                           '<div class="pop-text">💧' + hPop + '%</div></div>';
+                  count++;
+                }
+              }
+            }
+            document.getElementById('hourly-strip').innerHTML = hHtml;
+          }
+
+          // スライドカード4：3日後の週間予報（降水確率付き）
+          if (d.daily && d.daily.time) {
+            var dHtml = '';
+            for (var day = 1; day <= 3 && day < d.daily.time.length; day++) {
+              var parts = d.daily.time[day].split('-');
+              var dObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+              var dCode = d.daily.weather_code[day];
+              var dEmoji = (dCode >= 51) ? '🌧️' : (dCode >= 1) ? '☁️' : '☀️';
+              var dPop = (d.daily.precipitation_probability_max && d.daily.precipitation_probability_max[day] !== undefined) ? d.daily.precipitation_probability_max[day] : 0;
+              dHtml += '<div class="d-cell"><div class="d-date">' + (dObj.getMonth() + 1) + '/' + dObj.getDate() + '(' + WEEKDAYS[dObj.getDay()] + ')</div>' +
+                       '<div style="font-size:1rem; margin:2px 0;">' + dEmoji + '</div>' +
+                       '<div class="d-temp"><span class="t-max">' + Math.round(d.daily.temperature_2m_max[day]) + '°</span>/<span class="t-min">' + Math.round(d.daily.temperature_2m_min[day]) + '°</span></div>' +
+                       '<div class="pop-text">💧' + dPop + '%</div></div>';
+            }
+            document.getElementById('daily-strip').innerHTML = dHtml;
+          }
+
+          var now = new Date();
+          document.getElementById('footer-update-time').textContent = '最終データ更新: ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+        })
+        .catch(function(err) {
+          console.warn("Weather fetch failed:", err);
+          document.getElementById('wt-emoji').textContent = '☀️';
+          document.getElementById('wt-temp').textContent = '20°C';
+          document.getElementById('wt-desc').textContent = '晴れ';
+          document.getElementById('ind-humid').textContent = '50%';
+          document.getElementById('card-humid-text').textContent = '💧 湿度 50%';
+          document.getElementById('ind-wind').textContent = '2.5 m/s';
+        });
+
+      fetch(aqiUrl)
+        .then(function(r) { return r.json(); })
+        .then(function(aqiData) {
+          if (aqiData && aqiData.current && aqiData.current.european_aqi !== undefined) {
+            var aqi = Math.round(aqiData.current.european_aqi);
+            var aqiText = '良好';
+            if (aqi > 50) aqiText = '普通';
+            if (aqi > 100) aqiText = 'やや不良';
+            if (aqi > 150) aqiText = '不良';
+            document.getElementById('ind-aqi').textContent = aqi + ' (' + aqiText + ')';
+          }
+        })
+        .catch(function() {
+          document.getElementById('ind-aqi').textContent = '15 (良好)';
+        });
+    }
+
+    updateLocationUI();
+    loadWeather();
+    setInterval(loadWeather, 30 * 60 * 1000);
+
+    // 4. 防災・地震情報取得
+    var scaleMap = {
+      10: '震度1', 20: '震度2', 30: '震度3', 40: '震度4',
+      45: '震度5弱', 50: '震度5強', 55: '震度6弱', 60: '震度6強', 70: '震度7'
+    };
+
+    var tsunamiMap = {
+      'None': { text: '津波の心配なし', warn: false },
+      'Unknown': { text: '津波調査中', warn: false },
+      'Watch': { text: '⚠️ 津波注意報', warn: true },
+      'Warning': { text: '🚨 津波警報', warn: true }
+    };
+
+    function loadDisasterDetails() {
+      fetch('https://www.jma.go.jp/bosai/warning/data/warning/' + userLocation.prefCode + '.json')
+        .then(function(r) { return r.json(); })
+        .then(function(jmaData) {
+          var activeList = [];
+          var hasSpecial = false;
+          var hasWarning = false;
+
+          if (jmaData && jmaData.areaTypes) {
+            for (var a = 0; a < jmaData.areaTypes.length; a++) {
+              var areas = jmaData.areaTypes[a].areas || [];
+              for (var b = 0; b < areas.length; b++) {
+                if (areas[b].code === userLocation.cityCode) {
+                  var warnings = areas[b].warnings || [];
+                  for (var w = 0; w < warnings.length; w++) {
+                    if (warnings[w].status === '発表' || warnings[w].status === '継続') {
+                      var wName = warnings[w].name || '';
+                      if (wName) {
+                        activeList.push(wName);
+                        if (wName.indexOf('特別警報') !== -1) hasSpecial = true;
+                        else if (wName.indexOf('警報') !== -1) hasWarning = true;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          var banner = document.getElementById('jma-banner');
+          var textEl = document.getElementById('jma-warning-text');
+
+          if (activeList.length > 0) {
+            textEl.textContent = activeList.join(' ・ ');
+            banner.className = hasSpecial ? 'jma-banner has-danger' : (hasWarning ? 'jma-banner has-warning' : 'jma-banner');
+          } else {
+            banner.className = 'jma-banner';
+            textEl.textContent = '現在、気象警報・注意報はありません';
+          }
+        })
+        .catch(function() {
+          document.getElementById('jma-warning-text').textContent = '気象警報は発表されていません';
+        });
+
+      fetch('https://api.p2pquake.net/v2/history?codes=551&codes=556&limit=1')
+        .then(function(r) { return r.json(); })
+        .then(function(list) {
+          if (!list || !list.length) return;
+          var item = list[0];
+          var card = document.getElementById('quake-card');
+
+          if (item.code === 556) {
+            card.className = 'card alert-card danger';
+            document.getElementById('quake-scale').textContent = '🚨 緊急地震速報';
+            document.getElementById('quake-hypo').textContent = '強い揺れに警戒してください';
+            document.getElementById('quake-mag-depth').textContent = '直ちに身の安全を確保';
+            document.getElementById('quake-areas').textContent = '身を守る行動をとってください';
+            return;
+          }
+
+          card.className = 'card';
+          var eq = item.earthquake || {};
+          var hypo = eq.hypocenter || {};
+          var maxScaleStr = scaleMap[eq.maxScale] || '震度不明';
+
+          document.getElementById('quake-scale').textContent = '最大' + maxScaleStr;
+          document.getElementById('quake-time').textContent = (eq.time || '').slice(5, 16) + ' 発生';
+          document.getElementById('quake-hypo').textContent = hypo.name || '調査中';
+          document.getElementById('quake-mag-depth').textContent = 'M' + (hypo.magnitude || '--') + ' / 深さ ' + (hypo.depth || '--') + 'km';
+          document.getElementById('quake-coords').textContent = '北緯' + (hypo.latitude || '--') + ' / 東経' + (hypo.longitude || '--');
+          document.getElementById('quake-type').textContent = '震源・震度情報';
+
+          var tsInfo = tsunamiMap[eq.domesticTsunami] || { text: '津波の心配なし', warn: false };
+          var tsEl = document.getElementById('tsunami-status');
+          tsEl.textContent = tsInfo.text;
+          tsEl.className = tsInfo.warn ? 'tsunami-badge warn' : 'tsunami-badge';
+
+          var points = item.points || [];
+          if (points.length > 0) {
+            points.sort(function(a, b) { return (b.scale || 0) - (a.scale || 0); });
+            var areaList = [];
+            var seen = {};
+            for (var i = 0; i < points.length && areaList.length < 3; i++) {
+              var pScale = scaleMap[points[i].scale] || '';
+              var key = points[i].pref + '_' + pScale;
+              if (!seen[key]) {
+                seen[key] = true;
+                areaList.push(points[i].pref + '（' + pScale + '）');
+              }
+            }
+            document.getElementById('quake-areas').textContent = areaList.join('、');
+          } else {
+            document.getElementById('quake-areas').textContent = '観測地点データ待機中';
+          }
+        })
+        .catch(function() {});
+    }
+    loadDisasterDetails();
+    setInterval(loadDisasterDetails, 60 * 1000);
+
+    var newsItems = [];
+    var newsOffset = 0;
+
+    function loadNews() {
+      fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://www3.nhk.or.jp/rss/news/cat0.xml'))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data && data.items && data.items.length >= 2) {
+            newsItems = data.items.slice(0, 4);
+            renderNewsPair();
+          }
+        })
+        .catch(function() {
+          newsItems = [
+            { title: 'NHKニュース速報サンプル 1', description: '最新のニュース情報を取得しています。', pubDate: '2026-11-15 12:00:00', link: 'https://www3.nhk.or.jp/news/' },
+            { title: 'NHKニュース速報サンプル 2', description: '詳細な情報を順次お伝えしています。', pubDate: '2026-11-15 12:00:00', link: 'https://www3.nhk.or.jp/news/' }
+          ];
+          renderNewsPair();
+        });
+    }
+
+    function renderNewsPair() {
+      if (newsItems.length < 2) return;
+      
+      var item1 = newsItems[newsOffset % newsItems.length];
+      document.getElementById('news-title-1').textContent = item1.title;
+      var desc1 = (item1.description || '').replace(/<[^>]*>?/gm, '');
+      if (desc1.length > 90) desc1 = desc1.slice(0, 90) + '...';
+      document.getElementById('news-desc-1').textContent = desc1;
+      document.getElementById('news-date-1').textContent = item1.pubDate ? item1.pubDate.replace(/-/g, '/').slice(0, 16) : '';
+      document.getElementById('news-qr-1').src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(item1.link || 'https://www3.nhk.or.jp/news/');
+
+      var item2 = newsItems[(newsOffset + 1) % newsItems.length];
+      document.getElementById('news-title-2').textContent = item2.title;
+      var desc2 = (item2.description || '').replace(/<[^>]*>?/gm, '');
+      if (desc2.length > 90) desc2 = desc2.slice(0, 90) + '...';
+      document.getElementById('news-desc-2').textContent = desc2;
+      document.getElementById('news-date-2').textContent = item2.pubDate ? item2.pubDate.replace(/-/g, '/').slice(0, 16) : '';
+      document.getElementById('news-qr-2').src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(item2.link || 'https://www3.nhk.or.jp/news/');
+
+      newsOffset = (newsOffset + 2) % newsItems.length;
+    }
+
+    loadNews();
+    setInterval(loadNews, 15 * 60 * 1000);
+    setInterval(renderNewsPair, 20 * 1000);
+  </script>
+</body>
+</html>
